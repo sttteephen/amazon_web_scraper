@@ -51,16 +51,11 @@ def parse_reviews(soup):
 
     review_list = []
     review_cards = soup.find_all("div", class_="a-section review aok-relative")
-    # print(len(review_cards))
 
     # pull data from each review card and use it to create review object
     for review in review_cards:
 
-        """print(review.prettify())
-        print()"""
-
         profile = review.find_all("a", class_="a-profile")[0]["href"]
-        # print(profile)
 
         title = review.find_all(
             "a",
@@ -90,6 +85,7 @@ def get_next_page_href(soup):
     if len(nav_buttons) > 0:
         next_page_button = nav_buttons[0].find_all("li", class_="a-last")[0]
 
+        # check next button is not disabled
         if "a-diabled" not in next_page_button.get("class"):
             next_page_href = next_page_button.find_all("a")[0]["href"]
             next_page_href = "https://www.amazon.co.uk" + next_page_href
@@ -98,24 +94,27 @@ def get_next_page_href(soup):
     return next_page_href
 
 
+# validate the given url is an amazon product review page
 def check_url(url):
 
     valid = True
-    parsed = urlparse(url)
+    parsed_url = urlparse(url)
 
-    if parsed.netloc != "www.amazon.co.uk":
+    # check url is and amazon page
+    if parsed_url.netloc != "www.amazon.co.uk":
         print("url is not an amazon page")
         valid = False
 
-    elif "/product-reviews/" not in parsed.path:
+    # check url is a product review page
+    elif "/product-reviews/" not in parsed_url.path:
         print("url is not a product review page")
         valid = False
 
     return valid
 
 
-# get product reviews from each page up to page 5
-def get_reviews(url):
+# get product reviews from multiple pages up to given page depth
+def get_reviews(url, page_depth):
 
     all_reviews = []
 
@@ -123,21 +122,22 @@ def get_reviews(url):
         next_page = url
         page_count = 1
 
-        # check there is a next page and not past page 5
-        while next_page != "" and page_count <= 5:
+        # check there is a next page and not past max page depth
+        while next_page != "" and page_count <= page_depth:
 
             soup = get_page_html(next_page)
-            print("page ", page_count)
+            print("parsing page ", page_count)
+
             page_reviews = parse_reviews(soup)
             all_reviews += page_reviews
 
             next_page = get_next_page_href(soup)
             page_count += 1
 
-            print("next page")
     else:
         print("invalid url")
 
+    print(len(all_reviews), " reviews parsed")
     return all_reviews
 
 
@@ -158,15 +158,18 @@ def write_reviews(review_list):
 if __name__ == "__main__":
 
     url = ""
+    page_depth = 5  # default page depth
 
-    # check for url in arguments, give example if none
+    # check for url in arguments, give example url if none
     if len(sys.argv) > 1:
         url = sys.argv[1]
     else:
         url = "https://www.amazon.co.uk/Dark-Tower-II-Drawing-Three/product-reviews/B008BJ5FNE/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
 
-    reviews = get_reviews(url)
+    # check if a page depth has been given
+    if len(sys.argv) > 2 and sys.argv[2].isnumeric():
+        page_depth = int(sys.argv[2])
 
-    print(len(reviews), "reviews scraped")
+    reviews = get_reviews(url, page_depth)
 
     write_reviews(reviews)  # write reviews to csv
