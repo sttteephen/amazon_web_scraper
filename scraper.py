@@ -1,3 +1,4 @@
+import csv
 import requests
 from bs4 import BeautifulSoup
 
@@ -11,6 +12,9 @@ class AmazonReview:
 
     def __str__(self):
         return f"Profile: {self.profile}\nTitle: {self.title}\nStars: {self.stars}\nReview: {self.review}"
+
+    def to_list(self):
+        return [self.profile, self.title, self.stars, self.review]
 
 
 # request the page and create soup object from html
@@ -115,6 +119,19 @@ def get_reviews(url):
     return all_reviews
 
 
+def write_reviews(review_list):
+
+    with open("review.csv", "w") as review_file:
+
+        writer = csv.writer(review_file)
+
+        header = ["profile", "title", "stars", "review"]
+        writer.writerow(header)
+
+        for review in review_list:
+            writer.writerow(review.to_list())
+
+
 if __name__ == "__main__":
 
     reviews = get_reviews(
@@ -126,3 +143,5 @@ if __name__ == "__main__":
         print()
 
     print(len(reviews))
+
+    write_reviews(reviews)
