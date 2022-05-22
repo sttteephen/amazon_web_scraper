@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+import sys
 import csv
 import requests
 from bs4 import BeautifulSoup
@@ -51,7 +53,7 @@ def parse_reviews(soup):
     review_cards = soup.find_all("div", class_="a-section review aok-relative")
     # print(len(review_cards))
 
-    # get data from each review card and use it to create review object
+    # pull data from each review card and use it to create review object
     for review in review_cards:
 
         """print(review.prettify())
@@ -96,32 +98,53 @@ def get_next_page_href(soup):
     return next_page_href
 
 
+def check_url(url):
+
+    valid = True
+    parsed = urlparse(url)
+
+    if parsed.netloc != "www.amazon.co.uk":
+        print("url is not an amazon page")
+        valid = False
+
+    elif "/product-reviews/" not in parsed.path:
+        print("url is not a product review page")
+        valid = False
+
+    return valid
+
+
 # get product reviews from each page up to page 5
 def get_reviews(url):
 
     all_reviews = []
-    next_page = url
-    page_count = 1
 
-    # check there is a next page and not past page 5
-    while next_page != "" and page_count <= 5:
+    if check_url(url):
+        next_page = url
+        page_count = 1
 
-        soup = get_page_html(next_page)
-        print("page ", page_count)
-        page_reviews = parse_reviews(soup)
-        all_reviews += page_reviews
+        # check there is a next page and not past page 5
+        while next_page != "" and page_count <= 5:
 
-        next_page = get_next_page_href(soup)
-        page_count += 1
+            soup = get_page_html(next_page)
+            print("page ", page_count)
+            page_reviews = parse_reviews(soup)
+            all_reviews += page_reviews
 
-        print("next page")
+            next_page = get_next_page_href(soup)
+            page_count += 1
+
+            print("next page")
+    else:
+        print("invalid url")
 
     return all_reviews
 
 
+# write the data from a list of reviews to a csv file
 def write_reviews(review_list):
 
-    with open("review.csv", "w") as review_file:
+    with open("reviews.csv", "w") as review_file:
 
         writer = csv.writer(review_file)
 
@@ -134,14 +157,16 @@ def write_reviews(review_list):
 
 if __name__ == "__main__":
 
-    reviews = get_reviews(
-        "https://www.amazon.co.uk/Onco-Baby-Car-Mirror-Premium/product-reviews/B01FCMV5RM/ref=cm_cr_arp_d_paging_btm_next_2?ie=UTF8&reviewerType=all_reviews&pageNumber=1"
-    )
+    url = ""
 
-    for r in reviews:
-        print(r)
-        print()
+    # check for url in arguments, give example if none
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+    else:
+        url = "https://www.amazon.co.uk/Dark-Tower-II-Drawing-Three/product-reviews/B008BJ5FNE/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
 
-    print(len(reviews))
+    reviews = get_reviews(url)
 
-    write_reviews(reviews)
+    print(len(reviews), "reviews scraped")
+
+    write_reviews(reviews)  # write reviews to csv
