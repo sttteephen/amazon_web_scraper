@@ -1,5 +1,8 @@
+from html.parser import HTMLParser
+from nltk.sentiment import SentimentIntensityAnalyzer
 from urllib.parse import urlparse
 import sys
+import argparse
 import csv
 import requests
 from bs4 import BeautifulSoup
@@ -19,7 +22,7 @@ class AmazonReview:
         return [self.profile, self.title, self.stars, self.review]
 
 
-# request the page and create soup object from html
+# request the pages html and create the soup to be parsed
 def get_page_html(url):
 
     headers = {
@@ -75,7 +78,7 @@ def parse_reviews(soup):
     return review_list
 
 
-# check for a next page button and return href, return empty string if none
+# checks there is an active next page button on page and returns next pages href
 def get_next_page_href(soup):
 
     next_page_href = ""
@@ -86,7 +89,7 @@ def get_next_page_href(soup):
         next_page_button = nav_buttons[0].find_all("li", class_="a-last")[0]
 
         # check next button is not disabled
-        if "a-diabled" not in next_page_button.get("class"):
+        if "a-disabled" not in next_page_button.get("class"):
             next_page_href = next_page_button.find_all("a")[0]["href"]
             next_page_href = "https://www.amazon.co.uk" + next_page_href
 
@@ -141,8 +144,10 @@ def get_reviews(url, page_depth):
     return all_reviews
 
 
-# write the data from a list of reviews to a csv file
+# write the data from a list of reviews and the reviews sentiment score to a csv file
 def write_reviews(review_list):
+
+    sia = SentimentIntensityAnalyzer()
 
     with open("reviews.csv", "w") as review_file:
 
@@ -152,24 +157,46 @@ def write_reviews(review_list):
         writer.writerow(header)
 
         for review in review_list:
-            writer.writerow(review.to_list())
+            review_data = review.to_list()
+            # print(review_data)
+            review_score = sia.polarity_scores(review_data[3])["compound"]
+            review_data.append(review_score)
+            writer.writerow(review_data)
+
+
+# gets the values for url and page depth to be scraped if values have been given at command line
+def get_script_args():
+
+    # default values for url and depth
+    url = "https://www.amazon.co.uk/Dark-Tower-II-Drawing-Three/product-reviews/B008BJ5FNE/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
+    depth = 5
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-u",
+        "--url",
+        help="url of the amazon review page to be scraped, must be given inside inverted commas",
+    )
+    parser.add_argument(
+        "-d", "--depth", help="the number of pages to be scraped", type=int
+    )
+
+    args = parser.parse_args()
+
+    if args.url:
+        url = args.url
+
+    if args.depth:
+        depth = args.depth
+
+    return (url, depth)
 
 
 if __name__ == "__main__":
 
-    url = ""
-    page_depth = 5  # default page depth
+    url, page_depth = get_script_args()
 
-    # check for url in arguments, give example url if none
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
-    else:
-        url = "https://www.amazon.co.uk/Dark-Tower-II-Drawing-Three/product-reviews/B008BJ5FNE/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
-
-    # check if a page depth has been given
-    if len(sys.argv) > 2 and sys.argv[2].isnumeric():
-        page_depth = int(sys.argv[2])
-
+    # get a list of reviews from the given url up to the given page depth
     reviews = get_reviews(url, page_depth)
 
     write_reviews(reviews)  # write reviews to csv
