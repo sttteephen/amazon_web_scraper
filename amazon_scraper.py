@@ -1,4 +1,3 @@
-from html.parser import HTMLParser
 from nltk.sentiment import SentimentIntensityAnalyzer
 from urllib.parse import urlparse
 import sys
@@ -121,24 +120,20 @@ def get_reviews(url, page_depth):
 
     all_reviews = []
 
-    if check_url(url):
-        next_page = url
-        page_count = 1
+    next_page = url
+    page_count = 1
 
-        # check there is a next page and not past max page depth
-        while next_page != "" and page_count <= page_depth:
+    # check there is a next page and not past max page depth
+    while next_page != "" and page_count <= page_depth:
 
-            soup = get_page_html(next_page)
-            print("parsing page ", page_count)
+        soup = get_page_html(next_page)
+        print("parsing page ", page_count)
 
-            page_reviews = parse_reviews(soup)
-            all_reviews += page_reviews
+        page_reviews = parse_reviews(soup)
+        all_reviews += page_reviews
 
-            next_page = get_next_page_href(soup)
-            page_count += 1
-
-    else:
-        print("invalid url")
+        next_page = get_next_page_href(soup)
+        page_count += 1
 
     print(len(all_reviews), " reviews parsed")
     return all_reviews
@@ -196,7 +191,13 @@ if __name__ == "__main__":
 
     url, page_depth = get_script_args()
 
-    # get a list of reviews from the given url up to the given page depth
-    reviews = get_reviews(url, page_depth)
+    if check_url(url):
 
-    write_reviews(reviews)  # write reviews to csv
+        # get a list of reviews from the given url up to the given page depth
+        reviews = get_reviews(url, page_depth)
+
+        write_reviews(reviews)  # write reviews to csv
+
+    else:
+
+        print("invalid url")
