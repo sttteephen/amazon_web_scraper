@@ -48,14 +48,17 @@ def get_page_html(url):
     return soup
 
 
-# from soup return a list of individual review objects
+# from soup return a list of review objects
 def parse_reviews(soup):
 
     review_list = []
-    review_cards = soup.find_all("div", class_="a-section review aok-relative")
+    review_divs = soup.find_all("div", class_="a-section review aok-relative")
 
-    # pull data from each review card and use it to create review object
-    for review in review_cards:
+    # flag indicating if reviews from other countries start on this page
+    last_uk_review = False
+
+    # pull data from each review div and use it to create review object
+    for review in review_divs:
 
         profile = review.find_all("a", class_="a-profile")[0]["href"]
 
@@ -74,7 +77,20 @@ def parse_reviews(soup):
 
         review_list.append(r)
 
-    return review_list
+        # check if this is the last uk review
+        if (
+            # check review.next_sibling.next_sibling exists
+            review.next_sibling
+            and review.next_sibling.next_sibling
+            and review.next_sibling.next_sibling.text
+        ):
+            # check if it is the start of non uk reviews
+            if review.next_sibling.next_sibling.text.strip() == "From other countries":
+                # if so stop parsing reviews
+                last_uk_review = True
+                break
+
+    return (review_list, last_uk_review)
 
 
 # checks there is an active next page button on page and returns next pages href
@@ -119,7 +135,6 @@ def check_url(url):
 def get_reviews(url, page_depth):
 
     all_reviews = []
-
     next_page = url
     page_count = 1
 
@@ -129,11 +144,14 @@ def get_reviews(url, page_depth):
         soup = get_page_html(next_page)
         print("parsing page ", page_count)
 
-        page_reviews = parse_reviews(soup)
+        page_reviews, last_uk_review = parse_reviews(soup)
         all_reviews += page_reviews
 
-        next_page = get_next_page_href(soup)
-        page_count += 1
+        if last_uk_review:
+            next_page = ""
+        else:
+            next_page = get_next_page_href(soup)
+            page_count += 1
 
     print(len(all_reviews), " reviews parsed")
     return all_reviews
@@ -152,20 +170,22 @@ def write_reviews(review_list):
         writer.writerow(header)
 
         for review in review_list:
+            # get list of data from review object and append sentiment score
             review_data = review.to_list()
-            # print(review_data)
             review_score = sia.polarity_scores(review_data[3])["compound"]
             review_data.append(review_score)
+
             writer.writerow(review_data)
 
 
-# gets the values for url and page depth to be scraped if values have been given at command line
+# gets the values for url and page depth to be scraped if arguments have been given at command line
 def get_script_args():
 
     # default values for url and depth
     url = "https://www.amazon.co.uk/Dark-Tower-II-Drawing-Three/product-reviews/B008BJ5FNE/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
     depth = 5
 
+    # create valid options
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -178,6 +198,7 @@ def get_script_args():
 
     args = parser.parse_args()
 
+    # check options have been given and store their values
     if args.url:
         url = args.url
 
@@ -187,7 +208,7 @@ def get_script_args():
     return (url, depth)
 
 
-if __name__ == "__main__":
+def run():
 
     url, page_depth = get_script_args()
 
@@ -201,3 +222,8 @@ if __name__ == "__main__":
     else:
 
         print("invalid url")
+
+
+if __name__ == "__main__":
+
+    run()

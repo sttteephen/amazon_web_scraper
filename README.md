@@ -4,7 +4,7 @@ This is a web scraper built using Python and  Beautiful Soup. It scrapes reviews
 
 ## Usage 
 
-Certain arguments can be passed to the program: 
+Certain optional arguments can be passed to the program: 
 
 -u, --url       should be followed by the url of an Amazon review page which must be given inside inverted commas.
 
