@@ -10,6 +10,8 @@ Certain optional arguments can be passed to the program:
 
 -d, --depth     should be followed by the number of reviews pages to be scraped.
 
+-g, --graph     if this flag is given the program will produce some graphs from the data scraped. 
+
 If not passed a url the program will scrape an example page and if not passed a depth it will default to 5 pages.
 
 ## Build from Source
