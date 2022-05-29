@@ -1,5 +1,4 @@
 from nltk.sentiment import SentimentIntensityAnalyzer
-import sys
 import csv
 import requests
 from bs4 import BeautifulSoup
